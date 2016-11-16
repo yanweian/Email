@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +23,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
@@ -38,7 +40,7 @@ public class MainActivity extends AppCompatActivity
     private MyAdapter myAdapter;
     private ListView listView;
     private int sum = 0;
-    private boolean flag = true,timeflag=true;
+    private boolean flag = true, timeflag = true;
     private NotificationManager manager;
     private TextView textView;
     private int updatetime;
@@ -50,9 +52,11 @@ public class MainActivity extends AppCompatActivity
     private String pass;
     private String[] times;
     private Thread thread;
-    private TextView name,zhanghaotextview;
+    private TextView name, zhanghaotextview;
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
+
+    private int nowcount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,15 +86,15 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
 
-        View nav=navigationView.getHeaderView(0);
-        name= (TextView) nav.findViewById(R.id.name);
-        zhanghaotextview= (TextView) nav.findViewById(R.id.zhanghaotextView);
+        View nav = navigationView.getHeaderView(0);
+        name = (TextView) nav.findViewById(R.id.name);
+        zhanghaotextview = (TextView) nav.findViewById(R.id.zhanghaotextView);
         navigationView.setNavigationItemSelectedListener(this);
 
         user = getIntent().getStringExtra("user");
         pass = getIntent().getStringExtra("pass");
-        updatetime=1000*60*5;
-        times="5 s,1 min,5 min,10 min,15 min,30 min,60 min".split(",");
+        updatetime = 1000 * 60 * 5;
+        times = "5 s,1 min,5 min,10 min,15 min,30 min,60 min".split(",");
         init();
     }
 
@@ -114,26 +118,29 @@ public class MainActivity extends AppCompatActivity
             }
         }
         cursor.close();
-        sql="select *from settingtb where kind='updatetime'";
-        cursor=sqLiteDatabase.rawQuery(sql,null);
+        sql = "select *from settingtb where kind='updatetime'";
+        cursor = sqLiteDatabase.rawQuery(sql, null);
         if (cursor != null) {
             while (cursor.moveToNext()) {
-                String timestring= cursor.getString(cursor.getColumnIndex("valuestring"));
-                updatetime=Integer.parseInt(timestring);
+                String timestring = cursor.getString(cursor.getColumnIndex("valuestring"));
+                updatetime = Integer.parseInt(timestring);
             }
         }
-        sharedPreferences=getSharedPreferences("mailuser",MODE_PRIVATE);
-        editor=sharedPreferences.edit();
+        sharedPreferences = getSharedPreferences("mailuser", MODE_PRIVATE);
+        editor = sharedPreferences.edit();
     }
+
+    private ProgressDialog mDialog;
 
     private void init() {
         dateinit();
+        mDialog = new ProgressDialog(MainActivity.this);
         flag = true;
         manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         textView = (TextView) findViewById(R.id.count);
         itemmails = new ArrayList<>();
         socketProcess = new SocketProcess(user, pass);
-        name.setText(user.substring(0,user.indexOf("@")));
+        name.setText(user.substring(0, user.indexOf("@")));
         zhanghaotextview.setText(user);
         listView = (ListView) findViewById(R.id.maillist);
         listView.setVisibility(View.GONE);
@@ -148,11 +155,54 @@ public class MainActivity extends AppCompatActivity
                 startActivity(intent);
             }
         });
+        listView.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+                // 当不滚动时
+                if (scrollState == AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
+                    // 判断是否滚动到底部
+                    if (view.getLastVisiblePosition() == view.getCount() - 1) {
+                        if(nowcount==sum){
+                            Toast.makeText(MainActivity.this,"已加载全部数据！",Toast.LENGTH_SHORT).show();
+                        }else{
+                            mDialog.setMessage("正在加载更多.....");
+                            mDialog.setIndeterminate(false);
+                            mDialog.setCancelable(false);
+                            mDialog.show();
+                            //加载更多功能的代码
+                            startinsert();
+                        }
+                    } else if (view.getFirstVisiblePosition() == 0) {
+                        mDialog.setMessage("正在刷新服务信息.....");
+                        mDialog.setIndeterminate(false);
+                        mDialog.setCancelable(false);
+                        mDialog.show();
+                        //刷新服务器代码
+                        updatemail();
+                    }
+                }
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+
+            }
+        });
+        myAdapter = new MyAdapter(MainActivity.this, itemmails);
+        listView.setAdapter(myAdapter);
+        initinsert();
+    }
+
+    private ArrayList<Itemmail> miditemmails;
+
+    //手动插入
+    public void startinsert() {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    itemmails.addAll(socketProcess.getlist());
+                    nowcount = itemmails.size();
+                    miditemmails = socketProcess.getlist(nowcount);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -160,9 +210,33 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        myAdapter = new MyAdapter(MainActivity.this, itemmails);
-                        listView.setAdapter(myAdapter);
-                        sum = itemmails.size();
+                        itemmails.addAll(miditemmails);
+                        myAdapter.notifyDataSetChanged();
+                        mDialog.dismiss();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    //初始化插入数据
+    public void initinsert() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    nowcount = itemmails.size();
+                    sum = socketProcess.getsumnoc();
+                    miditemmails = socketProcess.getlist(nowcount);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Log.i("mymail", itemmails.size() + " " + socketProcess.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        itemmails.addAll(miditemmails);
+                        myAdapter.notifyDataSetChanged();
                         textView.setText("共" + sum + "条记录");
                         listView.setVisibility(View.VISIBLE);
                         startupdate();
@@ -171,9 +245,54 @@ public class MainActivity extends AppCompatActivity
             }
         }).start();
     }
+    //手动更新
+    public void updatemail() {
+        thread = new Thread(new Runnable() {
+            @Override
+            //后台刷新
+            public void run() {
+                SocketProcess socketProcess1 = new SocketProcess(socketProcess.getUser(), socketProcess.getPass());
+                try {
+                    //获取邮件总数
+                    final int count = socketProcess1.getsum();
+                    if (count > sum) {
+                        //刷新邮件列表,不考虑删除邮件的情况
+                        int start=count;
+                        int end=sum;
+                        sum = count;
+                        final ArrayList<Itemmail> ssitemmail=new ArrayList<>();
+                        for(int i=start;i>end;i--){
+                            Itemmail itemmail = socketProcess1.getitemmail(count);
+                            ssitemmail.add(itemmail);
+                        }
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                //插在队首
+                                itemmails.addAll(0, ssitemmail);
+                                myAdapter.notifyDataSetChanged();
+                                textView.setText("共" + sum + "条记录");
+                            }
+                        });
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDialog.dismiss();
+                        }
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
-    public void startupdate(){
-        thread=new Thread(new Runnable() {
+            }
+        });
+        thread.start();
+    }
+
+    //加载后台更新程序
+    public void startupdate() {
+        thread = new Thread(new Runnable() {
             @Override
             //后台刷新
             public void run() {
@@ -215,11 +334,11 @@ public class MainActivity extends AppCompatActivity
                                 }
                             });
                         }
-                        timeflag=true;
-                        int divid=updatetime/5;
-                        for(int i=0;i<divid;i++){
+                        timeflag = true;
+                        int divid = updatetime / 5;
+                        for (int i = 0; i < divid; i++) {
                             Thread.sleep(5);
-                            if(!timeflag){
+                            if (!timeflag) {
                                 break;
                             }
                         }
@@ -233,6 +352,7 @@ public class MainActivity extends AppCompatActivity
         });
         thread.start();
     }
+
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -255,27 +375,27 @@ public class MainActivity extends AppCompatActivity
             ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(MainActivity.this, R.layout.textlayout, times);
             listView.setAdapter(arrayAdapter);
             builder.setView(view);
-            final AlertDialog alertDialog=builder.create();
+            final AlertDialog alertDialog = builder.create();
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    String time=times[position];
-                    String kind=time.split(" ")[1];
-                    time=time.split(" ")[0];
+                    String time = times[position];
+                    String kind = time.split(" ")[1];
+                    time = time.split(" ")[0];
                     int n;
-                    if(kind.equals("min")){
-                        n=1000*60;
-                    }else{
-                        n=1000;
-                        if(time.equals("5")){
-                            Toast.makeText(MainActivity.this,"更新过于频繁可能会被“封号”，第二天才能重新使用哦！",Toast.LENGTH_SHORT).show();
+                    if (kind.equals("min")) {
+                        n = 1000 * 60;
+                    } else {
+                        n = 1000;
+                        if (time.equals("5")) {
+                            Toast.makeText(MainActivity.this, "更新过于频繁可能会被“封号”，第二天才能重新使用哦！", Toast.LENGTH_SHORT).show();
                         }
                     }
-                    updatetime=Integer.parseInt(time)*n;
-                    ContentValues contentValues=new ContentValues();
-                    contentValues.put("valuestring",updatetime+"");
-                    sqLiteDatabase.update("settingtb",contentValues,"kind='updatetime'",null);
-                    timeflag=false;
+                    updatetime = Integer.parseInt(time) * n;
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put("valuestring", updatetime + "");
+                    sqLiteDatabase.update("settingtb", contentValues, "kind='updatetime'", null);
+                    timeflag = false;
                     alertDialog.dismiss();
                 }
             });
@@ -287,16 +407,16 @@ public class MainActivity extends AppCompatActivity
             ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(MainActivity.this, R.layout.textlayout, zhanghaonomima);
             listView.setAdapter(arrayAdapter);
             builder.setView(view);
-            final AlertDialog alertDialog= builder.create();
+            final AlertDialog alertDialog = builder.create();
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     Zhanghao zhanghao = zhanghaos.get(position);
-                    flag=false;
-                    user=zhanghao.zhanghao;
-                    pass=zhanghao.mima;
-                    editor.putString("user",user);
-                    editor.putString("pass",pass);
+                    flag = false;
+                    user = zhanghao.zhanghao;
+                    pass = zhanghao.mima;
+                    editor.putString("user", user);
+                    editor.putString("pass", pass);
                     editor.commit();
                     //更新信息
                     init();
@@ -308,14 +428,14 @@ public class MainActivity extends AppCompatActivity
             editor.remove("user");
             editor.remove("pass");
             editor.commit();
-            Intent intent=new Intent(MainActivity.this,LoginActivity.class);
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
             startActivity(intent);
             MainActivity.this.finish();
         } else if (id == R.id.nav_runaway) {
             editor.remove("user");
             editor.remove("pass");
             editor.commit();
-            Intent intent=new Intent(MainActivity.this,LoginActivity.class);
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
             startActivity(intent);
             MainActivity.this.finish();
         } else if (id == R.id.nav_share) {

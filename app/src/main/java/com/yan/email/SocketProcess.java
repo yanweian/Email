@@ -53,6 +53,33 @@ public class SocketProcess {
         return count;
     }
 
+    public int getsumnoc() throws IOException {
+        int count = -1;
+        if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
+            //获取最新的邮件，必须重连
+            //重新连接pop3
+            socket = new Socket("pop3.163.com", 110);
+            output = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            System.out.println(input.readLine());
+            String username = user.substring(0, user.indexOf("@"));
+            output.println("user " + username);
+            output.flush();
+            System.out.println(input.readLine());
+            output.println("pass " + pass);
+            output.flush();
+            System.out.println(input.readLine());
+        }
+        output.println("stat");
+        output.flush();
+        String rest = input.readLine();
+        System.out.println(rest);
+        if (rest.toLowerCase().contains("+ok")) {
+            count = Integer.parseInt(rest.split(" ")[1]);
+        }
+        return count;
+    }
+
     public boolean isok() throws IOException {
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
             //重新连接pop3
@@ -77,8 +104,8 @@ public class SocketProcess {
         return true;
     }
 
-
-    public ArrayList<Itemmail> getlist() throws IOException {
+    //加入一个int参数，用于说明已读取的条数
+    public ArrayList<Itemmail> getlist(int n) throws IOException {
         ArrayList<Itemmail> itemmails = new ArrayList<>();
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
             socket = new Socket("pop3.163.com", 110);
@@ -103,13 +130,19 @@ public class SocketProcess {
         if (rest.toLowerCase().contains("+ok")) {
             sum = Integer.parseInt(rest.split(" ")[1]);
         }
+        System.out.println(sum);
         String server = null;
-        for (int i = sum; i > 0; i--) {
+        int start = sum - n;
+        int end = start - 10;
+        //一次最多读十条
+        for (int i = start; i > 0 && i > end; i--) {
+            System.out.println(i);
             output.println("retr " + i);
             output.flush();
             server = null;
             Itemmail itemmail = new Itemmail();
             while (!(server = input.readLine()).equals(".")) {
+
                 if (server.contains("(CST)")) {
                     String date = server;
                     date = date.trim();
@@ -184,7 +217,7 @@ public class SocketProcess {
         output.println("data");
         output.flush();
         System.out.println(input.readLine());
-        String con = "From: 网易邮箱<" + user + "\r\n";
+        String con = "From: 网易邮箱<" + user + ">\r\n";
         con += "To: <" + to + ">\r\n";
         con = con + "Subject: " + subject + "\r\n";
         con = con + "Content-Type: text/plain;charset=\"utf-8\"\r\n";
