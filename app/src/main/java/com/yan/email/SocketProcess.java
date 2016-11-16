@@ -187,7 +187,7 @@ public class SocketProcess {
         String con = "From: 网易邮箱<" + user + "\r\n";
         con += "To: <" + to + ">\r\n";
         con = con + "Subject: " + subject + "\r\n";
-        con = con + "Content-Type: text/plain;charset=\"gb2312\"\r\n";
+        con = con + "Content-Type: text/plain;charset=\"utf-8\"\r\n";
         con = con + "\r\n";
         con = con + content + "\r\n";
         con = con + ".\r\n";
