@@ -160,11 +160,12 @@ public class MainActivity extends AppCompatActivity
             public void onScrollStateChanged(AbsListView view, int scrollState) {
                 // 当不滚动时
                 if (scrollState == AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
+                    Log.i("viewlist", view.getLastVisiblePosition() + "  " + intflag);
                     // 判断是否滚动到底部
                     if (view.getLastVisiblePosition() == view.getCount() - 1) {
-                        if(nowcount==sum){
-                            Toast.makeText(MainActivity.this,"已加载全部数据！",Toast.LENGTH_SHORT).show();
-                        }else{
+                        if (nowcount == sum) {
+                            Toast.makeText(MainActivity.this, "已加载全部数据！", Toast.LENGTH_SHORT).show();
+                        } else {
                             mDialog.setMessage("正在加载更多.....");
                             mDialog.setIndeterminate(false);
                             mDialog.setCancelable(false);
@@ -172,7 +173,7 @@ public class MainActivity extends AppCompatActivity
                             //加载更多功能的代码
                             startinsert();
                         }
-                    } else if (view.getFirstVisiblePosition() == 0) {
+                    } else if (view.getFirstVisiblePosition() == 0 && view.getLastVisiblePosition() == 6) {
                         mDialog.setMessage("正在刷新服务信息.....");
                         mDialog.setIndeterminate(false);
                         mDialog.setCancelable(false);
@@ -219,6 +220,8 @@ public class MainActivity extends AppCompatActivity
         }).start();
     }
 
+    private int intflag = -1;
+
     //初始化插入数据
     public void initinsert() {
         new Thread(new Runnable() {
@@ -235,16 +238,18 @@ public class MainActivity extends AppCompatActivity
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        listView.setVisibility(View.VISIBLE);
                         itemmails.addAll(miditemmails);
                         myAdapter.notifyDataSetChanged();
                         textView.setText("共" + sum + "条记录");
-                        listView.setVisibility(View.VISIBLE);
                         startupdate();
+                        intflag = listView.getLastVisiblePosition();
                     }
                 });
             }
         }).start();
     }
+
     //手动更新
     public void updatemail() {
         thread = new Thread(new Runnable() {
@@ -257,11 +262,11 @@ public class MainActivity extends AppCompatActivity
                     final int count = socketProcess1.getsum();
                     if (count > sum) {
                         //刷新邮件列表,不考虑删除邮件的情况
-                        int start=count;
-                        int end=sum;
+                        int start = count;
+                        int end = sum;
                         sum = count;
-                        final ArrayList<Itemmail> ssitemmail=new ArrayList<>();
-                        for(int i=start;i>end;i--){
+                        final ArrayList<Itemmail> ssitemmail = new ArrayList<>();
+                        for (int i = start; i > end; i--) {
                             Itemmail itemmail = socketProcess1.getitemmail(count);
                             ssitemmail.add(itemmail);
                         }
