@@ -15,7 +15,6 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 public class SendActivity extends AppCompatActivity {
@@ -72,8 +71,14 @@ public class SendActivity extends AppCompatActivity {
                                         }
                                     }
                                 });
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                            } catch (Exception e) {
+                                //e.printStackTrace();
+//                                runOnUiThread(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        Toast.makeText(SendActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                                    }
+//                                });
                             }
                         }
                     }).start();

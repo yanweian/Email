@@ -23,9 +23,9 @@
     <item android:title="Communicate">
         <menu>
             <item
-                android:id="@+id/nav_share"
+                android:id="@+id/nav_shuaxing"
                 android:icon="@drawable/ic_menu_share"
-                android:title="Share" />
+                android:title="刷新" />
             <item
                 android:id="@+id/nav_send"
                 android:icon="@drawable/ic_menu_send"

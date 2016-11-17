@@ -8,8 +8,6 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.TextView;
 
-import java.io.IOException;
-
 public class DetailActivity extends AppCompatActivity {
 
     private SocketProcess socketProcess;
@@ -47,8 +45,14 @@ public class DetailActivity extends AppCompatActivity {
             public void run() {
                 try {
                     itemmail=socketProcess.getitemmail(position);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (Exception e) {
+                    //e.printStackTrace();
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(DetailActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
                 }
                 if(itemmail!=null){
                     runOnUiThread(new Runnable() {

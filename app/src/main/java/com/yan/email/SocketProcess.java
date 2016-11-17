@@ -3,7 +3,6 @@ package com.yan.email;
 import android.util.Base64;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -31,7 +30,7 @@ public class SocketProcess {
         this.pass = pass;
     }
 
-    public int getsum() throws IOException {
+    public int getsum() throws Exception {
         //获取最新的邮件，必须重连
         int count = -1;
         //重新连接pop3
@@ -53,7 +52,7 @@ public class SocketProcess {
         return count;
     }
 
-    public int getsumnoc() throws IOException {
+    public int getsumnoc() throws Exception {
         int count = -1;
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
             //获取最新的邮件，必须重连
@@ -80,7 +79,7 @@ public class SocketProcess {
         return count;
     }
 
-    public boolean isok() throws IOException {
+    public boolean isok() throws Exception {
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
             //重新连接pop3
             socket = new Socket("pop3.163.com", 110);
@@ -105,7 +104,7 @@ public class SocketProcess {
     }
 
     //加入一个int参数，用于说明已读取的条数
-    public ArrayList<Itemmail> getlist(int n) throws IOException {
+    public ArrayList<Itemmail> getlist(int n) throws Exception {
         ArrayList<Itemmail> itemmails = new ArrayList<>();
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
             socket = new Socket("pop3.163.com", 110);
@@ -179,7 +178,7 @@ public class SocketProcess {
     }
 
     //发送邮件
-    public boolean sendMessage(String to, String subject, String content) throws IOException {
+    public boolean sendMessage(String to, String subject, String content) throws Exception {
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("smtp.163.com")) {
             System.out.println(user);
             System.out.println(pass);
@@ -234,7 +233,7 @@ public class SocketProcess {
         return true;
     }
 
-    public Itemmail getitemmail(int position) throws IOException {
+    public Itemmail getitemmail(int position) throws Exception {
         Itemmail itemmail = new Itemmail();
         if (socket == null || socket.isClosed() || !socket.getInetAddress().getHostName().equals("pop3.163.com")) {
             socket = new Socket("pop3.163.com", 110);

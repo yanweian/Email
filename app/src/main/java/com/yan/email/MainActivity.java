@@ -30,7 +30,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity
@@ -160,7 +159,7 @@ public class MainActivity extends AppCompatActivity
             public void onScrollStateChanged(AbsListView view, int scrollState) {
                 // 当不滚动时
                 if (scrollState == AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
-                    Log.i("viewlist", view.getLastVisiblePosition() + "  " + intflag);
+//                    Log.i("viewlist", view.getLastVisiblePosition() + "  " + intflag);
                     // 判断是否滚动到底部
                     if (view.getLastVisiblePosition() == view.getCount() - 1) {
                         if (nowcount == sum) {
@@ -173,14 +172,14 @@ public class MainActivity extends AppCompatActivity
                             //加载更多功能的代码
                             startinsert();
                         }
-                    } else if (view.getFirstVisiblePosition() == 0 && view.getLastVisiblePosition() == 6) {
+                    } /*else if (view.getFirstVisiblePosition() == 0 && view.getLastVisiblePosition() == 6) {
                         mDialog.setMessage("正在刷新服务信息.....");
                         mDialog.setIndeterminate(false);
                         mDialog.setCancelable(false);
                         mDialog.show();
                         //刷新服务器代码
                         updatemail();
-                    }
+                    }*/
                 }
             }
 
@@ -204,8 +203,14 @@ public class MainActivity extends AppCompatActivity
                 try {
                     nowcount = itemmails.size();
                     miditemmails = socketProcess.getlist(nowcount);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (Exception e) {
+                    //e.printStackTrace();
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(MainActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
                 }
                 Log.i("mymail", itemmails.size() + " " + socketProcess.toString());
                 runOnUiThread(new Runnable() {
@@ -220,7 +225,7 @@ public class MainActivity extends AppCompatActivity
         }).start();
     }
 
-    private int intflag = -1;
+//    private int intflag = -1;
 
     //初始化插入数据
     public void initinsert() {
@@ -231,8 +236,14 @@ public class MainActivity extends AppCompatActivity
                     nowcount = itemmails.size();
                     sum = socketProcess.getsumnoc();
                     miditemmails = socketProcess.getlist(nowcount);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (Exception e) {
+                    //e.printStackTrace();
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(MainActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
                 }
                 Log.i("mymail", itemmails.size() + " " + socketProcess.toString());
                 runOnUiThread(new Runnable() {
@@ -243,7 +254,6 @@ public class MainActivity extends AppCompatActivity
                         myAdapter.notifyDataSetChanged();
                         textView.setText("共" + sum + "条记录");
                         startupdate();
-                        intflag = listView.getLastVisiblePosition();
                     }
                 });
             }
@@ -252,47 +262,36 @@ public class MainActivity extends AppCompatActivity
 
     //手动更新
     public void updatemail() {
-        thread = new Thread(new Runnable() {
+        new Thread(new Runnable() {
             @Override
-            //后台刷新
             public void run() {
-                SocketProcess socketProcess1 = new SocketProcess(socketProcess.getUser(), socketProcess.getPass());
                 try {
-                    //获取邮件总数
-                    final int count = socketProcess1.getsum();
-                    if (count > sum) {
-                        //刷新邮件列表,不考虑删除邮件的情况
-                        int start = count;
-                        int end = sum;
-                        sum = count;
-                        final ArrayList<Itemmail> ssitemmail = new ArrayList<>();
-                        for (int i = start; i > end; i--) {
-                            Itemmail itemmail = socketProcess1.getitemmail(count);
-                            ssitemmail.add(itemmail);
-                        }
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                //插在队首
-                                itemmails.addAll(0, ssitemmail);
-                                myAdapter.notifyDataSetChanged();
-                                textView.setText("共" + sum + "条记录");
-                            }
-                        });
-                    }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            mDialog.dismiss();
-                        }
-                    });
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    nowcount = itemmails.size();
+                    sum = socketProcess.getsum();
+                    miditemmails = socketProcess.getlist(nowcount);
+                } catch (Exception e) {
+                    //e.printStackTrace();
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(MainActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
                 }
-
+                Log.i("mymail", itemmails.size() + " " + socketProcess.toString());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        flagdialog=false;
+                        listView.setVisibility(View.VISIBLE);
+                        itemmails.addAll(miditemmails);
+                        myAdapter.notifyDataSetChanged();
+                        textView.setText("共" + sum + "条记录");
+                        mDialog.dismiss();
+                    }
+                });
             }
-        });
-        thread.start();
+        }).start();
     }
 
     //加载后台更新程序
@@ -347,10 +346,16 @@ public class MainActivity extends AppCompatActivity
                                 break;
                             }
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) {
+                        //e.printStackTrace();
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                Toast.makeText(MainActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                            }
+//                        });
+                        startupdate();
+                        break;
                     }
                 }
             }
@@ -443,8 +448,34 @@ public class MainActivity extends AppCompatActivity
             Intent intent = new Intent(MainActivity.this, LoginActivity.class);
             startActivity(intent);
             MainActivity.this.finish();
-        } else if (id == R.id.nav_share) {
-
+        } else if (id == R.id.nav_shuaxing) {
+            mDialog.setMessage("正在刷新服务信息.....");
+            mDialog.setIndeterminate(false);
+            mDialog.setCancelable(false);
+            mDialog.show();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(4000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    mDialog.dismiss();
+                    if(flagdialog){
+                        mDialog.dismiss();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(MainActivity.this,"连接服务器失败！",Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                }
+            }).start();
+            //刷新服务器代码
+            itemmails.clear();
+            updatemail();
         } else if (id == R.id.nav_send) {
 
         }
@@ -453,4 +484,5 @@ public class MainActivity extends AppCompatActivity
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+    private boolean flagdialog=true;
 }

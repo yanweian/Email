@@ -22,7 +22,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -252,7 +251,13 @@ public class LoginActivity extends AppCompatActivity {
                     insertdate(mEmail,mPassword);
                     return true;
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Toast.makeText(LoginActivity.this,"发生不可预知的致命错误！",Toast.LENGTH_SHORT).show();
+//                    }
+//                });
                 return false;
             }
             return false;
